@@ -3,6 +3,7 @@
 # -----------------------------------------------------------------------------
 add_library(sl_texture_decoder_core STATIC
     VersionInfo.cpp
+    batch/BatchConverter.cpp
     cache/CacheLayout.cpp
     cache/TextureAssembler.cpp
     cache/TextureCacheReader.cpp

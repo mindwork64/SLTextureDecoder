@@ -51,6 +51,22 @@ message(STATUS "OpenJPEG headers: ${OPENJPEG_INCLUDE_DIRS}")
 # -----------------------------------------------------------------------------
 add_subdirectory(src)
 
+# -----------------------------------------------------------------------------
+# Optional Qt 6 GUI frontend
+# -----------------------------------------------------------------------------
+option(SLTCD_BUILD_GUI "Build the Qt 6 GUI frontend (needs Qt6Widgets)" ON)
+
+if(SLTCD_BUILD_GUI)
+    find_package(Qt6 QUIET COMPONENTS Core Gui Widgets)
+    if(Qt6_FOUND)
+        set(CMAKE_AUTOMOC ON)
+        add_subdirectory(gui)
+    else()
+        message(STATUS "Qt6 Widgets not found - the GUI frontend is skipped "
+                       "(set SLTCD_BUILD_GUI=OFF to silence this)")
+    endif()
+endif()
+
 include(CTest)
 if(BUILD_TESTING)
     add_subdirectory(tests)

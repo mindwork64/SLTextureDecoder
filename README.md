@@ -16,9 +16,10 @@ Decodes Second Life / Firestorm JPEG 2000 texture caches
 | 6 | Component handling (1/2/3/4/5 components → RGBA) | done |
 | 7 | PNG output via libpng | done |
 | 8 | CLI (`--cache-dir`, filters, progress) | done |
-| 9 | Batch conversion service | next |
-| 10 | Robustness / error reporting | planned |
-| 11 | Release build, static OpenJPEG, GUI | deferred |
+| 9 | Batch conversion service (worker pool, resume) | done |
+| 10 | GUI (Qt 6 Widgets, dynamic) | done |
+| 11 | Robustness / error reporting | planned |
+| 12 | Release build, static OpenJPEG | deferred |
 
 The reverse engineered layout, the two populations of records and the evidence
 behind them are documented in [docs/format-notes.md](docs/format-notes.md).
@@ -29,10 +30,14 @@ behind them are documented in [docs/format-notes.md](docs/format-notes.md).
 * CMake ≥ 3.16 and Ninja
 * `mingw-w64-x86_64-openjpeg2` (2.5.4), `mingw-w64-x86_64-libpng` (1.6.58)
 * `mingw-w64-x86_64-gtest` (1.17.0) and `mingw-w64-x86_64-cmake`
+* optional, for the GUI: `mingw-w64-x86_64-qt6-base`
 
 ```sh
-pacman -S --needed mingw-w64-x86_64-{toolchain,cmake,ninja,openjpeg2,libpng,gtest}
+pacman -S --needed mingw-w64-x86_64-{toolchain,cmake,ninja,openjpeg2,libpng,gtest,qt6-base}
 ```
+
+Without Qt 6 the GUI target is skipped silently; `-DSLTCD_BUILD_GUI=OFF` turns it
+off explicitly.
 
 ## Build & test
 
@@ -45,6 +50,8 @@ ctest --test-dir build --output-on-failure
 Products:
 
 * `build/bin/SLTextureDecoder.exe` – the CLI
+* `build/bin/SLTextureDecoderGUI.exe` – the Qt 6 desktop frontend (needs the
+  `C:\msys64\mingw64\bin` directory, or `windeployqt`, on `PATH`)
 * `build/bin/sl_texture_decoder_tests.exe` – the unit tests
 * `build/lib/libsl_texture_decoder_core.a` – the decoding library
 
@@ -85,8 +92,39 @@ selected texture was converted, otherwise the code of the first failure
 Cost is dominated by OpenJPEG itself and the viewer writes single tile
 codestreams, so the decoder cannot spread one texture over several cores: expect
 roughly 0.05 s for a 256×256 and 0.3 s for a 1024×1024 texture. A full 54 825
-texture cache therefore takes hours - use `--limit`, `--complete-only` or `--id`
-while exploring.
+texture cache therefore takes hours with this single threaded CLI - use
+`--limit`, `--complete-only` or `--id` while exploring, and the GUI or
+`--batch --jobs <n>` for a full run.
+
+## GUI
+
+`SLTextureDecoderGUI.exe` wraps the same library in a window: pick the cache
+folder (the record count and the encoder name of the cache appear right away),
+pick the output folder (empty means `<cache>/png`), optionally limit the run,
+then press **Start conversion**. The window shows a progress bar, the log with
+warnings and errors in colour, the list of converted files and a preview of the
+selected one; **Cancel** stops after the texture that is being decoded.
+
+* **Threads** (`auto` = one per logical CPU) decodes several textures in
+  parallel. The viewer writes single tile codestreams, so this is the only way
+  to use more than one core; on a 2 core / 4 thread CPU a `--jobs 4` run is
+  about 2.3x faster than a single threaded one, with byte identical output.
+* **Overwrite existing files** stays off by default, so the PNGs already in the
+  output folder are skipped: an interrupted run is resumed by starting it again.
+* The last used folders and options are remembered in
+  `HKCU\Software\SLTextureDecoder\GUI`.
+* Browse the results in Explorer with **Open output folder**.
+
+The same binary converts without a window, which is what an unattended overnight
+run uses:
+
+```powershell
+.\build\bin\SLTextureDecoderGUI.exe --batch --cache-dir 'D:\FS Cache\texturecache' `
+    --out-dir D:\out --jobs 4 --complete-only
+```
+
+`--batch` accepts every CLI option plus `--jobs <n>`, and it returns the exit
+code of the CLI (0 when nothing failed).
 
 ## Layout
 
@@ -94,6 +132,8 @@ while exploring.
 src/
   VersionInfo.*            linked library versions
   main.cpp                 CLI entry point
+  batch/
+    BatchConverter.*       parallel conversion run (worker pool, resume, cancel)
   cache/
     CacheLayout.*          cache directory <-> file mapping
     TextureAssembler.*     header block + body -> codestream
@@ -114,6 +154,10 @@ src/
     FileUtils.*            binary file helpers
     Logger.*               logging facade
     UUID.*                 128 bit asset identifiers
+gui/
+  MainWindow.*             Qt 6 window: folders, options, progress, log, preview
+  BatchWorker.*            runs sltcd::batch::run() off the GUI thread
+  main.cpp                 GUI entry point + "--batch" headless mode
 tests/
   data/                    frozen slice from a real cache (+ manifest.txt)
   TestCacheFixture.h       throw-away cache directory built from tests/data
