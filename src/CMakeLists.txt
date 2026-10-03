@@ -4,7 +4,9 @@
 add_library(sl_texture_decoder_core STATIC
     VersionInfo.cpp
     cache/CacheLayout.cpp
+    cache/TextureAssembler.cpp
     cache/TextureEntries.cpp
+    jpeg2000/Jpeg2000Decoder.cpp
     utils/UUID.cpp
     utils/FileUtils.cpp
     utils/Logger.cpp

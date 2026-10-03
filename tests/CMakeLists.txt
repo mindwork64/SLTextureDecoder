@@ -3,6 +3,8 @@ find_package(GTest REQUIRED)
 add_executable(sl_texture_decoder_tests
     test_cache_layout.cpp
     test_errors.cpp
+    test_jpeg2000_decoder.cpp
+    test_texture_assembler.cpp
     test_texture_entries.cpp
     test_uuid.cpp
     test_version_info.cpp

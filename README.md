@@ -10,10 +10,10 @@ Decodes Second Life / Firestorm JPEG 2000 texture caches
 | 0 | Toolchain, dependency check | done |
 | 1 | Skeleton: `sl_texture_decoder_core` + CLI, CMake, gtest/ctest | done |
 | 2 | `texture.entries` parser, cache layout, frozen test slice | done |
-| 3 | Codestream assembler (header block + body) | next |
+| 3 | Codestream assembler (header block + body) | done |
 | 4 | `.texture` body discovery / batch iteration | planned |
-| 5 | JPEG 2000 decoding via OpenJPEG | planned |
-| 6 | Component handling (RGB / YCbCr → RGB, alpha, MCT=1 with 5 components) | planned |
+| 5 | JPEG 2000 decoding via OpenJPEG (strict + lenient fallback) | done |
+| 6 | Component handling (RGB / YCbCr → RGB, alpha, MCT=1 with 5 components) | next |
 | 7 | PNG output via libpng | planned |
 | 8 | CLI (`--cache-dir`, filters, progress) | planned |
 | 9 | Batch conversion service | planned |
@@ -56,7 +56,11 @@ src/
   main.cpp                 CLI entry point
   cache/
     CacheLayout.*          cache directory <-> file mapping
+    TextureAssembler.*     header block + body -> codestream
     TextureEntries.*       texture.entries header + records
+  jpeg2000/
+    DecodedImage.h         decoded image (8 bit, interleaved)
+    Jpeg2000Decoder.*      OpenJPEG wrapper
   utils/
     Constants.h            format constants (CacheFormatConfig)
     Errors.h               error hierarchy with exit codes
@@ -68,19 +72,26 @@ tests/
   test_*.cpp               gtest suites
 tools/
   make_test_slice.ps1      regenerates tests/data from a real cache
+  make_reference_pixels.ps1  regenerates the reference pixels with opj_decompress
 docs/
   format-notes.md          reverse engineering notes
 ```
 
 ## Regenerating the test slice
 
-`tests/data/` holds ~38 KiB extracted from a real cache. Only
+`tests/data/` holds ~70 KiB extracted from a real cache. Only
 `entries_mini.bin` is modified (its `mEntries` field is patched so the file is
-self-consistent); everything else is a verbatim copy.
+self-consistent); everything else is a verbatim copy or a decoded reference.
 
 ```powershell
 pwsh -File tools/make_test_slice.ps1 -CacheDir 'D:\FS Cache\texturecache'
+pwsh -File tools/make_reference_pixels.ps1
 ```
+
+`reference_394.rgba` is the interleaved 16x256x4 pixel dump produced by the
+standalone `opj_decompress` utility; the unit tests decode the frozen
+codestream themselves and compare byte for byte with it, which pins component
+order, bit depth and the inverse MCT step.
 
 The fixture list and the expected record values are described in
 `tests/data/manifest.txt`.

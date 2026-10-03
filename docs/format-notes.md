@@ -91,11 +91,16 @@ groups:
 * The record itself is self-consistent (`mImageSize == mBodySize + 601`) and the
   body file size always matches `mBodySize`, so the *record* and the *file* are
   intact; only the codestream bytes beyond the cached prefix are missing.
+* **The prefix is still decodable.** OpenJPEG in lenient mode
+  (`opj_decoder_set_strict_mode(OPJ_FALSE)`) returns what it could read: record
+  100 of the frozen slice decodes to 512x512x3 with the truncation visible in
+  the diagnostics. The missing bytes are rendered as missing detail, so the
+  image is blurry rather than broken.
 
-Practical consequence: group B entries cannot be decoded to a complete image
-from the cache alone. The tool must classify them
-(`TextureEntry::isComplete()` / `isPartial()`) and report them instead of
-producing silently broken PNG files.
+Practical consequence: group B entries cannot be decoded *exactly* from the
+cache alone, but a best-effort image can be produced. The tool must classify
+them (`TextureEntry::isComplete()` / `isPartial()`, `AssembledTexture::complete`)
+and report them as best-effort instead of presenting them as lossless output.
 
 ## Open questions
 
@@ -103,9 +108,8 @@ producing silently broken PNG files.
   sim/bake metadata and the `a=` UUIDs are **not** present in `texture.entries`
   (they are source asset ids of derived textures). Whatever the cause, the
   viewer cached fewer bytes than its own record announces.
-* Is group B recoverable with a *lenient* OpenJPEG decode
-  (`opj_decoder_set_strict_mode(OPJ_FALSE)`)? To be tested when the decoder
-  stage is implemented; a partially decoded image would still be better than
-  nothing.
+* Is group B recoverable with a *lenient* OpenJPEG decode? **Yes** - see the
+  bullet above; the test `Jpeg2000Decoder.LenientModeRecoversTruncatedRecords`
+  pins the behaviour.
 * `FastCache.cache` is not needed for decoding. It is documented here only
   because it shares the record index space.
