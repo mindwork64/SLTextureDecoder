@@ -32,6 +32,29 @@ Decodes Second Life / Firestorm JPEG 2000 texture caches
 The reverse engineered layout, the two populations of records and the evidence
 behind them are documented in [docs/format-notes.md](docs/format-notes.md).
 
+## Documentation
+
+The **[wiki](https://github.com/mindwork64/SLTextureDecoder/wiki)** collects the
+same material in browsable pages:
+
+* [Installation](https://github.com/mindwork64/SLTextureDecoder/wiki/Installation)
+  - requirements, MSYS2 packages, build, products, where the viewer keeps its
+  cache.
+* [Usage](https://github.com/mindwork64/SLTextureDecoder/wiki/Usage) - every
+  option, output naming, exit codes, examples.
+* [GUI](https://github.com/mindwork64/SLTextureDecoder/wiki/GUI) - the window,
+  the stored settings, the headless `--batch` mode.
+* [Cache format](https://github.com/mindwork64/SLTextureDecoder/wiki/Cache-Format)
+  - the `texture.*` layout, complete vs truncated records, component mapping.
+* [Architecture](https://github.com/mindwork64/SLTextureDecoder/wiki/Architecture)
+  - module map, decoding pipeline, threading model, tests.
+* [Performance](https://github.com/mindwork64/SLTextureDecoder/wiki/Performance)
+  - measured throughput, memory, tuning.
+* [Troubleshooting](https://github.com/mindwork64/SLTextureDecoder/wiki/Troubleshooting)
+  - exit codes, truncated records, Qt runtime, slow runs.
+* [Legal notice](https://github.com/mindwork64/SLTextureDecoder/wiki/Legal-Notice)
+  - scope of use, rights in the output, trademarks, licence.
+
 ## Requirements
 
 * MSYS2 `mingw-w64-x86_64` toolchain, C++20
@@ -115,8 +138,10 @@ selected one; **Cancel** stops after the texture that is being decoded.
 
 * **Threads** (`auto` = one per logical CPU) decodes several textures in
   parallel. The viewer writes single tile codestreams, so this is the only way
-  to use more than one core; on a 2 core / 4 thread CPU a `--jobs 4` run is
-  about 2.3x faster than a single threaded one, with byte identical output.
+  to use more than one core; on a 2 core / 4 thread CPU a `--jobs 4` run was
+  measured at about 2.5x a single threaded one (120 textures: 17.5 s vs 44.3 s),
+  with byte identical output. Numbers are on the
+  [wiki Performance page](https://github.com/mindwork64/SLTextureDecoder/wiki/Performance).
 * **Overwrite existing files** stays off by default, so the PNGs already in the
   output folder are skipped: an interrupted run is resumed by starting it again.
 * The last used folders and options are remembered in
