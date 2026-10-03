@@ -1,10 +1,13 @@
+#include <exception>
 #include <iostream>
 #include <string>
 #include <vector>
 
 #include "VersionInfo.h"
-#include "utils/Constants.h"
+#include "cli/CliOptions.h"
+#include "cli/Runner.h"
 #include "utils/Errors.h"
+#include "utils/Logger.h"
 
 namespace {
 
@@ -14,39 +17,41 @@ void printVersion() {
               << "  linked libpng   : " << sltcd::libpngVersion() << '\n';
 }
 
-void printUsage() {
-    std::cout << "SLTextureDecoder " << sltcd::toolVersion() << '\n'
-              << "Decodes Second Life / Firestorm JPEG2000 texture caches into PNG.\n\n"
-              << "Usage:\n"
-              << "  SLTextureDecoder --version        show version and linked libraries\n"
-              << "  SLTextureDecoder --help           show this help\n"
-              << "  SLTextureDecoder --cache-dir <dir>  decode a texture cache directory\n\n"
-              << "Format constants:\n"
-              << "  texture header size : " << sltcd::CacheFormatConfig::kTextureHeaderSize << " bytes\n"
-              << "  entries info size   : " << sltcd::CacheFormatConfig::kEntriesInfoSize << " bytes\n"
-              << "  entry record size   : " << sltcd::CacheFormatConfig::kEntrySizeBytes << " bytes\n";
-}
-
 } // namespace
 
 int main(int argc, char** argv) {
     const std::vector<std::string> args(argv + (argc > 0 ? 1 : 0), argv + argc);
 
+    sltcd::Logger logger;
+
     if (args.empty()) {
-        printUsage();
+        std::cout << sltcd::cli::usageText();
         return static_cast<int>(sltcd::ErrorCode::Usage);
     }
 
-    if (args[0] == "--version" || args[0] == "-V") {
-        printVersion();
-        return static_cast<int>(sltcd::ErrorCode::Ok);
-    }
+    try {
+        const sltcd::cli::CliOptions options = sltcd::cli::CliOptions::parse(args);
+        logger.setVerbose(options.verbose);
 
-    if (args[0] == "--help" || args[0] == "-h") {
-        printUsage();
-        return static_cast<int>(sltcd::ErrorCode::Ok);
-    }
+        switch (options.action) {
+        case sltcd::cli::CliOptions::Action::Help:
+            std::cout << sltcd::cli::usageText();
+            return static_cast<int>(sltcd::ErrorCode::Ok);
+        case sltcd::cli::CliOptions::Action::Version:
+            printVersion();
+            return static_cast<int>(sltcd::ErrorCode::Ok);
+        case sltcd::cli::CliOptions::Action::Decode:
+            break;
+        }
 
-    std::cerr << "error: cache decoding is not implemented yet (project skeleton)\n";
-    return static_cast<int>(sltcd::ErrorCode::Usage);
+        const sltcd::cli::RunSummary summary = sltcd::cli::run(options, logger);
+        return summary.failed == 0 ? static_cast<int>(sltcd::ErrorCode::Ok)
+                                   : static_cast<int>(sltcd::ErrorCode::DecodeError);
+    } catch (const sltcd::Error& error) {
+        logger.error(error.toUserMessage());
+        return static_cast<int>(error.code());
+    } catch (const std::exception& error) {
+        logger.error(error.what());
+        return static_cast<int>(sltcd::ErrorCode::IoError);
+    }
 }

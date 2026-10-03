@@ -102,12 +102,52 @@ cache alone, but a best-effort image can be produced. The tool must classify
 them (`TextureEntry::isComplete()` / `isPartial()`, `AssembledTexture::complete`)
 and report them as best-effort instead of presenting them as lossless output.
 
+## Component samples → PNG pixels
+
+OpenJPEG hands out one plane per component; the tool turns them into the single
+RGBA layout it writes everywhere.
+
+| Components | Mapping |
+| --- | --- |
+| 1 | luminance → R=G=B, opaque |
+| 2 | luminance + alpha |
+| 3 | RGB, opaque |
+| 4 | RGBA |
+| 5 | RGBA from components 0..3, the 5th plane dropped + warning |
+
+Component counts of the reference cache, from a 1-in-100 sample of the live
+records (527 of 54 825, `SIZ` marker of each header block): *264 three, 226 four,
+37 five* - so one texture in seven carries a surplus plane and the mapping above
+matters.
+
+### The alpha is component 3, also for 5 components
+
+Record 123386 is a complete (`mImageSize - mBodySize = 600`) 2048×2048×5 texture.
+Its planes are `mean 123.7 / 87.4 / 75.0` (photographic), `mean 253.3` with
+99.2 % of the samples at 255 and 0.7 % in between, and finally `0.0` (all
+samples zero). The `FastCache.cache` preview of the *same record* has an alpha
+channel of `mean 253.3` too, while its RGB channels are ordinary colour - i.e.
+the viewer's own alpha equals component 3, not component 4. Records 123378
+(1024×1024×5) and 123412 (512×512×5) behave the same way: components 3 and 4 are
+255 there, and both previews have an alpha of 255.
+
+So the surplus plane is *not* alpha: it holds a constant value per texture (0 and
+255 in the samples). Its meaning is unknown, hence the warning and the drop.
+
+Subsampled components (`dx`/`dy` ≠ 1) are rejected instead of resampled, because
+the viewer never writes them and silently handling them would hide a format
+change.
+
 ## Open questions
 
 * What produced group B? The `a=<uuid>&c=<rgba>&z=<timestamp>` COM payload is
   sim/bake metadata and the `a=` UUIDs are **not** present in `texture.entries`
   (they are source asset ids of derived textures). Whatever the cause, the
   viewer cached fewer bytes than its own record announces.
+* What is the 5th component of the 5 component codestreams? It is constant per
+  texture (0 or 255 in the two records inspected) and is *not* alpha. Candidates
+  are a mask or a leftover plane of the encoder; nothing in the cache explains
+  it. The tool drops it and warns.
 * Is group B recoverable with a *lenient* OpenJPEG decode? **Yes** - see the
   bullet above; the test `Jpeg2000Decoder.LenientModeRecoversTruncatedRecords`
   pins the behaviour.

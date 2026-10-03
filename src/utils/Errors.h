@@ -35,6 +35,12 @@ private:
     ErrorCode code_;
 };
 
+/// Raised by the command line parser for wrong or incomplete arguments.
+class UsageError : public Error {
+public:
+    explicit UsageError(std::string message) : Error(ErrorCode::Usage, std::move(message)) {}
+};
+
 class CacheNotFound : public Error {
 public:
     explicit CacheNotFound(std::string message) : Error(ErrorCode::CacheNotFound, std::move(message)) {}
