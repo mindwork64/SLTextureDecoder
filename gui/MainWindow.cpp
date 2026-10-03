@@ -82,6 +82,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle(QStringLiteral("SL Texture Decoder %1").arg(QString::fromStdString(toolVersion())));
     buildUi();
     loadSettings();
+
+    auto* notice =
+        new QLabel(tr("Educational use only - not affiliated with Linden Lab or the Firestorm project"), this);
+    notice->setToolTip(tr("This tool reads a texture cache that is already on this machine, opens it read-only, "
+                          "decodes it locally and never connects to the grid. Copyright in the textures belongs "
+                          "to their creators; see NOTICE.md in the repository for the full legal notice."));
+    statusBar()->addPermanentWidget(notice);
     statusBar()->showMessage(tr("Ready"));
 }
 

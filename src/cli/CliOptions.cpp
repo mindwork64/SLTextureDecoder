@@ -107,7 +107,13 @@ std::string usageText() {
            "  texture header size : " +
            std::to_string(CacheFormatConfig::kTextureHeaderSize) + " bytes\n" +
            "  entries info size   : " + std::to_string(CacheFormatConfig::kEntriesInfoSize) + " bytes\n" +
-           "  entry record size   : " + std::to_string(CacheFormatConfig::kEntrySizeBytes) + " bytes\n";
+           "  entry record size   : " + std::to_string(CacheFormatConfig::kEntrySizeBytes) + " bytes\n\n" +
+           "Notice:\n"
+           "  Educational and research use only; the cache is opened read-only and no\n"
+           "  network access is performed. Not affiliated with Linden Research, Inc.\n"
+           "  (Second Life) or the Phoenix Firestorm Project (Firestorm Viewer), whose\n"
+           "  names are used descriptively. Copyright in the decoded textures stays\n"
+           "  with their creators - see NOTICE.md. Use your own cache only.\n";
 }
 
 } // namespace sltcd::cli

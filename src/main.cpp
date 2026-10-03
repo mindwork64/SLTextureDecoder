@@ -14,7 +14,9 @@ namespace {
 void printVersion() {
     std::cout << "SLTextureDecoder " << sltcd::toolVersion() << '\n'
               << "  linked OpenJPEG : " << sltcd::openjpegVersion() << '\n'
-              << "  linked libpng   : " << sltcd::libpngVersion() << '\n';
+              << "  linked libpng   : " << sltcd::libpngVersion() << '\n'
+              << "MIT licensed, educational and research use only, no warranty;\n"
+                 "not affiliated with Linden Research, Inc. or the Firestorm project.\n";
 }
 
 } // namespace

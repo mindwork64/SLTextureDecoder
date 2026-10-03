@@ -3,6 +3,14 @@
 Decodes Second Life / Firestorm JPEG 2000 texture caches
 (`texture.entries` + `texture.cache` + per-texture `.texture` files) into PNG.
 
+> **Educational and research use only.** The tool reads a cache that is already
+> on your own disk, decodes it locally and writes PNG files; it opens the cache
+> read-only, never connects to the grid, never downloads anything and does not
+> touch another user's data. Copyright in the textures stays with their
+> creators, and this project claims no rights in them. Not affiliated with,
+> endorsed by or supported by Linden Research, Inc. or the Firestorm Viewer
+> project - read [NOTICE.md](NOTICE.md) before use.
+
 ## Status
 
 | Stage | Content | State |
@@ -114,6 +122,9 @@ selected one; **Cancel** stops after the texture that is being decoded.
 * The last used folders and options are remembered in
   `HKCU\Software\SLTextureDecoder\GUI`.
 * Browse the results in Explorer with **Open output folder**.
+* The status bar carries a permanent reminder that the tool is for educational
+  use and is not affiliated with Linden Lab or the Firestorm project (details in
+  [NOTICE.md](NOTICE.md)).
 
 The same binary converts without a window, which is what an unattended overnight
 run uses:
@@ -186,4 +197,33 @@ codestream themselves and compare byte for byte with it, which pins component
 order, bit depth and the inverse MCT step.
 
 The fixture list and the expected record values are described in
-`tests/data/manifest.txt`.
+`tests/data/manifest.txt`. The slice is a test vector only - no rights in it are
+claimed, and it is removed on request; see [NOTICE.md](NOTICE.md).
+
+## Legal notice
+
+This is an independent, **educational and research** tool. It reads a texture
+cache that is already on the machine it runs on, opens it read-only, decodes the
+codestreams locally and never contacts the Second Life grid or any other
+service; it does not circumvent any protection measure and does not grant access
+to anything the user could not already read.
+
+It is not affiliated with, authorised by, endorsed by or supported by Linden
+Research, Inc. ("Second Life") or the Phoenix Firestorm Project, Inc.
+("Firestorm Viewer"); those names are used descriptively, to say which file
+format the tool interoperates with. Copyright in the decoded textures belongs to
+their creators and/or Linden Research, Inc. - the `LICENSE` of this repository
+covers the source code only, and users are responsible for having the right to
+access the files they point the tool at and for complying with the Second Life
+Terms of Service and with copyright law. Do not publish or redistribute decoded
+textures you are not entitled to use.
+
+The full notice, including the trademark and test data statements, is in
+[NOTICE.md](NOTICE.md).
+
+## License
+
+MIT - see [LICENSE](LICENSE). The licence covers the original source code and
+documentation of this repository; it grants no rights in any decoded content.
+Third-party dependencies keep their own licences (Firestorm is GPL v2, Qt 6 is
+LGPL v3 / commercial, OpenJPEG is BSD 2-clause, libpng is libpng-2.0).

@@ -92,7 +92,9 @@ int runHeadless(const std::vector<std::string>& args, sltcd::Logger& logger) {
                      "  --batch      convert without opening a window\n";
         return static_cast<int>(sltcd::ErrorCode::Ok);
     case sltcd::cli::CliOptions::Action::Version:
-        std::cout << "SLTextureDecoderGUI " << sltcd::toolVersion() << '\n';
+        std::cout << "SLTextureDecoderGUI " << sltcd::toolVersion() << '\n'
+                  << "MIT licensed, educational and research use only, no warranty;\n"
+                     "not affiliated with Linden Research, Inc. or the Firestorm project.\n";
         return static_cast<int>(sltcd::ErrorCode::Ok);
     case sltcd::cli::CliOptions::Action::Decode:
         break;
