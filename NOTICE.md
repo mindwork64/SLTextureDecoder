@@ -74,6 +74,16 @@ that data are claimed; the slices are the minimum needed for the tests. A
 rightsholder who objects to any file in this repository can open an issue and it
 will be removed or replaced immediately.
 
+## Licence
+
+The original source code and documentation of this repository are released
+under the MIT licence - see `LICENSE`. That licence covers the source code only:
+it grants **no rights** in any texture, image, model or other content the tool
+may read, decode, convert or write, nor in the test data described above. Such
+content remains the property of its respective rightsholders and is governed by
+their own terms, by the Second Life Terms of Service and by applicable copyright
+law.
+
 ## No warranty
 
 The software is provided "as is", without warranty of any kind - see `LICENSE`.
