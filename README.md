@@ -29,6 +29,15 @@ Decodes Second Life / Firestorm JPEG 2000 texture caches
 | 11 | Robustness / error reporting | done |
 | 12 | Release build, static OpenJPEG | deferred |
 
+Stage 11 closed the robustness work: atomic output (`<name>.part` + rename), Ctrl+C
+with exit code `10`, sanity limits before any allocation, and `--dry-run`. What it
+left open is tracked as issues: [#3](https://github.com/mindwork64/SLTextureDecoder/issues/3)
+(negative corpus and fuzzing), [#4](https://github.com/mindwork64/SLTextureDecoder/issues/4)
+(machine-readable error report), [#5](https://github.com/mindwork64/SLTextureDecoder/issues/5)
+(CI with sanitizers and a clang-format check) and
+[#6](https://github.com/mindwork64/SLTextureDecoder/issues/6) (live cache: sharing
+violations, cache changed during a run).
+
 The reverse engineered layout, the two populations of records and the evidence
 behind them are documented in [docs/format-notes.md](docs/format-notes.md).
 
