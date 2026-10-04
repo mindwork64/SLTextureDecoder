@@ -66,6 +66,8 @@ same material in browsable pages:
 
 ## Requirements
 
+### Windows (MSYS2)
+
 * MSYS2 `mingw-w64-x86_64` toolchain, C++20
 * CMake ≥ 3.16 and Ninja
 * `mingw-w64-x86_64-openjpeg2` (2.5.4), `mingw-w64-x86_64-libpng` (1.6.58)
@@ -76,23 +78,50 @@ same material in browsable pages:
 pacman -S --needed mingw-w64-x86_64-{toolchain,cmake,ninja,openjpeg2,libpng,gtest,qt6-base}
 ```
 
+### Linux (Debian / Ubuntu)
+
+The same tree builds against the distribution packages - verified on Ubuntu
+24.04 / Linux Mint 22 with GCC 13, CMake 3.28 and Ninja.
+
+* `g++`, `cmake`, `ninja-build` - toolchain, C++20
+* `libopenjp2-7-dev` - OpenJPEG 2.5 headers and CMake package
+* `libpng-dev` - libpng 1.6
+* `libgtest-dev` - GoogleTest, for the unit tests
+* optional, for the GUI: `qt6-base-dev`
+
+```sh
+sudo apt-get install -y g++ cmake ninja-build libopenjp2-7-dev libpng-dev libgtest-dev qt6-base-dev
+```
+
+The Debian/Ubuntu OpenJPEG package ships `OpenJPEGConfig.cmake` without a matching
+`OpenJPEGConfigVersion.cmake`, so a versioned `find_package(OpenJPEG 2.5)` is
+rejected as "version: unknown". `CMakeLists.txt` therefore tries the versioned
+form first and falls back to the unversioned one.
+
 Without Qt 6 the GUI target is skipped silently; `-DSLTCD_BUILD_GUI=OFF` turns it
 off explicitly.
 
 ## Build & test
 
 ```sh
+# Windows (MSYS2 mingw-w64 shell)
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=C:/msys64/mingw64
+cmake --build build
+ctest --test-dir build --output-on-failure
+
+# Linux: the system packages are found automatically, no prefix path needed
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Products:
+Products (`.exe` on Windows, no suffix on Linux):
 
-* `build/bin/SLTextureDecoder.exe` – the CLI
-* `build/bin/SLTextureDecoderGUI.exe` – the Qt 6 desktop frontend (needs the
-  `C:\msys64\mingw64\bin` directory, or `windeployqt`, on `PATH`)
-* `build/bin/sl_texture_decoder_tests.exe` – the unit tests
+* `build/bin/SLTextureDecoder[.exe]` – the CLI
+* `build/bin/SLTextureDecoderGUI[.exe]` – the Qt 6 desktop frontend (in a Windows
+  build it needs the `C:\msys64\mingw64\bin` directory, or `windeployqt`, on
+  `PATH`; on Linux the distribution Qt libraries)
+* `build/bin/sl_texture_decoder_tests[.exe]` – the unit tests
 * `build/lib/libsl_texture_decoder_core.a` – the decoding library
 
 ## Usage
