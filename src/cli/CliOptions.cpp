@@ -53,6 +53,10 @@ CliOptions CliOptions::parse(const std::vector<std::string>& args) {
             options.completeOnly = true;
         } else if (arg == "--overwrite") {
             options.overwrite = true;
+        } else if (arg == "--keep-j2k") {
+            options.keepJ2k = true;
+        } else if (arg == "--no-alpha") {
+            options.noAlpha = true;
         } else if (arg == "--cache-dir") {
             options.cacheDir = value();
             haveCacheDir = true;
@@ -97,12 +101,15 @@ std::string usageText() {
            "  --limit <n>         stop after n textures\n"
            "  --complete-only     skip records whose cached codestream is truncated\n"
            "  --overwrite         write over existing PNG files\n"
+           "  --keep-j2k          also write the assembled codestream next to the PNG\n"
+           "  --no-alpha          write an RGB PNG instead of RGBA\n"
            "  -v, --verbose       log every record\n"
            "  -h, --help          show this help\n"
            "  -V, --version       show version and linked libraries\n\n"
            "Output:\n"
            "  <uuid>.png          decoded from a complete codestream\n"
-           "  <uuid>.partial.png  best effort result from a truncated codestream\n\n"
+           "  <uuid>.partial.png  best effort result from a truncated codestream\n"
+           "  <uuid>.j2c          assembled codestream, only with --keep-j2k\n\n"
            "Format constants:\n"
            "  texture header size : " +
            std::to_string(CacheFormatConfig::kTextureHeaderSize) + " bytes\n" +

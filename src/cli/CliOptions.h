@@ -29,6 +29,10 @@ struct CliOptions {
     bool completeOnly = false;
     /// Rewrite PNG files that are already there.
     bool overwrite = false;
+    /// Also write the assembled codestream as <uuid>.j2c next to the PNG.
+    bool keepJ2k = false;
+    /// Write an RGB PNG instead of RGBA (the alpha channel is dropped).
+    bool noAlpha = false;
     bool verbose = false;
 
     /// Throws sltcd::UsageError for an unusable command line.

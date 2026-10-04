@@ -52,6 +52,10 @@ std::filesystem::path outputFile(const std::filesystem::path& outDir, const UUID
     return outDir / (id.toString() + (complete ? ".png" : ".partial.png"));
 }
 
+std::filesystem::path codestreamFile(const std::filesystem::path& outDir, const UUID& id, bool complete) {
+    return outDir / (id.toString() + (complete ? ".j2c" : ".partial.j2c"));
+}
+
 RunSummary run(const CliOptions& options, Logger& logger) {
     const cache::TextureCacheReader reader = cache::TextureCacheReader::open(options.cacheDir);
     const std::filesystem::path outDir = options.outputDirectory();
@@ -81,10 +85,18 @@ RunSummary run(const CliOptions& options, Logger& logger) {
         }
 
         try {
-            const cache::DecodedTexture texture = reader.decode(index);
+            const cache::DecodedTexture texture = reader.decode(index, options.keepJ2k);
             std::string warning;
-            const std::vector<std::uint8_t> rgba = jpeg2000::toRgba(texture.image, &warning);
-            png::writeRgba(target, rgba, texture.image.width, texture.image.height);
+            if (options.noAlpha) {
+                png::writeRgb(target, jpeg2000::toRgb(texture.image, &warning), texture.image.width,
+                              texture.image.height);
+            } else {
+                png::writeRgba(target, jpeg2000::toRgba(texture.image, &warning), texture.image.width,
+                               texture.image.height);
+            }
+            if (options.keepJ2k) {
+                fileutils::writeFile(codestreamFile(outDir, entry.id, entry.isComplete()), texture.codestream);
+            }
 
             ++summary.written;
             if (!texture.complete) {

@@ -68,6 +68,10 @@ std::filesystem::path pngFile(const std::filesystem::path& outDir, const UUID& i
     return outDir / (id.toString() + (complete ? ".png" : ".partial.png"));
 }
 
+std::filesystem::path codestreamFile(const std::filesystem::path& outDir, const UUID& id, bool complete) {
+    return outDir / (id.toString() + (complete ? ".j2c" : ".partial.j2c"));
+}
+
 std::filesystem::path outputDirectory(const BatchOptions& options) {
     if (!options.outDir.empty()) {
         return options.outDir;
@@ -159,10 +163,19 @@ BatchSummary run(const BatchOptions& options, Logger& logger, const BatchCallbac
             result.file = target;
 
             try {
-                const cache::DecodedTexture texture = reader.decode(index);
+                const cache::DecodedTexture texture = reader.decode(index, options.keepJ2k);
                 std::string warning;
-                const std::vector<std::uint8_t> rgba = jpeg2000::toRgba(texture.image, &warning);
-                png::writeRgba(target, rgba, texture.image.width, texture.image.height);
+                if (options.noAlpha) {
+                    png::writeRgb(target, jpeg2000::toRgb(texture.image, &warning), texture.image.width,
+                                  texture.image.height);
+                } else {
+                    png::writeRgba(target, jpeg2000::toRgba(texture.image, &warning), texture.image.width,
+                                   texture.image.height);
+                }
+                if (options.keepJ2k) {
+                    fileutils::writeFile(codestreamFile(summary.outDir, entry.id, entry.isComplete()),
+                                         texture.codestream);
+                }
 
                 result.width = texture.image.width;
                 result.height = texture.image.height;

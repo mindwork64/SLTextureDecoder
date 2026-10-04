@@ -22,6 +22,10 @@ struct RunSummary {
 /// File name used for one texture: <uuid>.png or <uuid>.partial.png.
 std::filesystem::path outputFile(const std::filesystem::path& outDir, const UUID& id, bool complete);
 
+/// File name of the assembled codestream next to the PNG (--keep-j2k):
+/// <uuid>.j2c or <uuid>.partial.j2c.
+std::filesystem::path codestreamFile(const std::filesystem::path& outDir, const UUID& id, bool complete);
+
 /// Convert the textures `options` selects. A broken texture is logged and
 /// counted, it never aborts the run; only problems that stop the whole run
 /// (missing cache directory, ...) propagate as sltcd::Error.
