@@ -57,6 +57,8 @@ CliOptions CliOptions::parse(const std::vector<std::string>& args) {
             options.keepJ2k = true;
         } else if (arg == "--no-alpha") {
             options.noAlpha = true;
+        } else if (arg == "--dry-run") {
+            options.dryRun = true;
         } else if (arg == "--cache-dir") {
             options.cacheDir = value();
             haveCacheDir = true;
@@ -101,6 +103,7 @@ std::string usageText() {
            "  --limit <n>         stop after n textures\n"
            "  --complete-only     skip records whose cached codestream is truncated\n"
            "  --overwrite         write over existing PNG files\n"
+           "  --dry-run           report what a run would write and change nothing\n"
            "  --keep-j2k          also write the assembled codestream next to the PNG\n"
            "  --no-alpha          write an RGB PNG instead of RGBA\n"
            "  -v, --verbose       log every record\n"
@@ -110,6 +113,10 @@ std::string usageText() {
            "  <uuid>.png          decoded from a complete codestream\n"
            "  <uuid>.partial.png  best effort result from a truncated codestream\n"
            "  <uuid>.j2c          assembled codestream, only with --keep-j2k\n\n"
+           "Interruption:\n"
+           "  Every file is written to <name>.part first and renamed when it is\n"
+           "  complete. Ctrl+C therefore stops after the record in progress, leaves\n"
+           "  no half written PNG behind and exits with code 10.\n\n"
            "Format constants:\n"
            "  texture header size : " +
            std::to_string(CacheFormatConfig::kTextureHeaderSize) + " bytes\n" +

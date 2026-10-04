@@ -15,6 +15,7 @@ add_library(sl_texture_decoder_core STATIC
     png/PngWriter.cpp
     utils/UUID.cpp
     utils/FileUtils.cpp
+    utils/Interrupt.cpp
     utils/Logger.cpp
 )
 

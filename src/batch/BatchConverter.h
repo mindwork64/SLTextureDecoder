@@ -25,6 +25,10 @@ struct BatchOptions {
     bool keepJ2k = false;
     /// Write an RGB PNG instead of RGBA (the alpha channel is dropped).
     bool noAlpha = false;
+    /// Report what a run would write and change nothing (no PNG, no j2c, no
+    /// output directory). BatchResult callbacks stay silent, the counters
+    /// describe the run that would happen.
+    bool dryRun = false;
     /// Worker threads; 0 means std::thread::hardware_concurrency().
     unsigned jobs = 1;
     /// Convert at most this many textures; 0 means no limit.
@@ -51,12 +55,15 @@ struct BatchSummary {
     std::filesystem::path outDir;
     std::size_t records = 0;  ///< records the cache announces
     std::size_t selected = 0; ///< records that were scheduled
-    std::size_t written = 0;  ///< PNG files written
+    std::size_t written = 0;  ///< PNG files written (see the note on dry runs)
     std::size_t partial = 0;  ///< of those: best effort results
     std::size_t skipped = 0;  ///< PNG file was already present
     std::size_t failed = 0;   ///< records that could not be decoded
     std::uint64_t bytes = 0;  ///< bytes written
-    bool cancelled = false;   ///< the caller asked to stop
+    bool cancelled = false;   ///< the caller asked to stop, or the user did
+    /// True when the run stopped because the user interrupted it (Ctrl+C);
+    /// sltcd::interrupt::requested() became true between two records.
+    bool interrupted = false;
 };
 
 /// Progress hooks. Every callback may be called from several worker threads at
@@ -85,6 +92,12 @@ std::filesystem::path outputDirectory(const BatchOptions& options);
 /// threads. A broken texture is logged and counted, it never aborts the run.
 /// Only problems that stop the whole run (missing cache directory, unusable
 /// output directory) propagate as sltcd::Error.
+///
+/// The run also stops when sltcd::interrupt::requested() becomes true (Ctrl+C),
+/// which sets both summary.cancelled and summary.interrupted.
+///
+/// With options.dryRun nothing is written and no directory is created: the
+/// counters describe the run that would happen.
 BatchSummary run(const BatchOptions& options, Logger& logger, const BatchCallbacks& callbacks = BatchCallbacks{});
 
 } // namespace sltcd::batch

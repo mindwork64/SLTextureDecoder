@@ -33,6 +33,9 @@ struct CliOptions {
     bool keepJ2k = false;
     /// Write an RGB PNG instead of RGBA (the alpha channel is dropped).
     bool noAlpha = false;
+    /// Report what a run would do and write nothing (no PNG, no j2c, not even
+    /// the output directory).
+    bool dryRun = false;
     bool verbose = false;
 
     /// Throws sltcd::UsageError for an unusable command line.

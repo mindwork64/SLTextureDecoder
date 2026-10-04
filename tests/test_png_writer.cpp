@@ -12,6 +12,7 @@
 
 #include "png/PngWriter.h"
 #include "utils/Errors.h"
+#include "utils/FileUtils.h"
 
 namespace {
 
@@ -102,6 +103,51 @@ TEST(PngWriter, RejectsABufferThatDoesNotMatchTheSize) {
     const std::filesystem::path path = scratchFile("bad.png");
     EXPECT_THROW(sltcd::png::writeRgba(path, std::vector<std::uint8_t>(10, 0), 3, 2), sltcd::WriteError);
     EXPECT_FALSE(std::filesystem::exists(path));
+    EXPECT_FALSE(std::filesystem::exists(sltcd::fileutils::temporaryPath(path)));
+
+    std::filesystem::remove_all(path.parent_path());
+}
+
+TEST(PngWriter, LeavesNoTemporaryFileBehind) {
+    const std::uint32_t width = 2;
+    const std::uint32_t height = 2;
+    const std::filesystem::path path = scratchFile("atomic.png");
+    sltcd::png::writeRgba(path, std::vector<std::uint8_t>(width * height * 4, 0x7F), width, height);
+
+    EXPECT_TRUE(std::filesystem::exists(path));
+    EXPECT_FALSE(std::filesystem::exists(sltcd::fileutils::temporaryPath(path)));
+
+    std::filesystem::remove_all(path.parent_path());
+}
+
+TEST(PngWriter, ReplacesAnExistingFile) {
+    const std::filesystem::path path = scratchFile("replace.png");
+
+    sltcd::png::writeRgba(path, std::vector<std::uint8_t>(2 * 1 * 4, 0x11), 2, 1);
+    const std::uintmax_t first = sltcd::fileutils::size(path);
+
+    std::vector<std::uint8_t> bigger(4 * 4 * 4, 0x22);
+    sltcd::png::writeRgba(path, bigger, 4, 4);
+
+    EXPECT_GT(sltcd::fileutils::size(path), first);
+    EXPECT_FALSE(std::filesystem::exists(sltcd::fileutils::temporaryPath(path)));
+
+    const LoadedPng loaded = readPng(path);
+    EXPECT_EQ(loaded.width, 4U);
+    EXPECT_EQ(loaded.height, 4U);
+    EXPECT_EQ(loaded.rgba, bigger);
+
+    std::filesystem::remove_all(path.parent_path());
+}
+
+TEST(PngWriter, FailsWithoutTouchingTheTargetWhenTheNameIsTakenByADirectory) {
+    const std::filesystem::path path = scratchFile("blocked.png");
+    std::filesystem::create_directory(path); // something is in the way of the rename
+
+    EXPECT_THROW(sltcd::png::writeRgba(path, std::vector<std::uint8_t>(2 * 2 * 4, 0), 2, 2), sltcd::WriteError);
+
+    EXPECT_TRUE(std::filesystem::is_directory(path));
+    EXPECT_FALSE(std::filesystem::exists(sltcd::fileutils::temporaryPath(path)));
 
     std::filesystem::remove_all(path.parent_path());
 }

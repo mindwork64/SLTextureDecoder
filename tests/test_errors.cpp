@@ -14,6 +14,9 @@ TEST(Errors, ExposeCategoryCodes) {
     EXPECT_EQ(sltcd::WriteError("x").code(), sltcd::ErrorCode::WriteError);
     EXPECT_EQ(sltcd::IoError("x").code(), sltcd::ErrorCode::IoError);
     EXPECT_EQ(sltcd::InvalidFormat("x").code(), sltcd::ErrorCode::InvalidFormat);
+    // An interrupted run is not an error: the codes are handed out to the
+    // process exit code unchanged, so the value is part of the interface.
+    EXPECT_EQ(static_cast<int>(sltcd::ErrorCode::Interrupted), 10);
 }
 
 TEST(Errors, CarryMessageAndAreCatchableAsBaseClass) {

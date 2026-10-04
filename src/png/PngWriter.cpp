@@ -8,6 +8,7 @@
 #include <system_error>
 
 #include "utils/Errors.h"
+#include "utils/FileUtils.h"
 
 namespace sltcd::png {
 namespace {
@@ -46,29 +47,36 @@ void writePixels(const std::filesystem::path& path, const std::vector<std::uint8
         }
     }
 
-    std::FILE* file = std::fopen(path.string().c_str(), "wb");
+    // libpng writes through a FILE*, so the atomic write of fileutils cannot be
+    // used here; the pattern is the same: into "<path>.part", then rename it
+    // over the target. An interrupted run leaves a stale .part file - which no
+    // later run mistakes for a finished PNG - instead of a broken PNG.
+    const std::filesystem::path temporary = fileutils::temporaryPath(path);
+
+    std::FILE* file = std::fopen(temporary.string().c_str(), "wb");
     if (file == nullptr) {
-        throw WriteError("cannot open file for writing: " + path.string());
+        throw WriteError("cannot open file for writing: " + temporary.string());
     }
 
     std::string error;
     png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, &error, onError, onWarning);
     if (png == nullptr) {
         std::fclose(file);
+        fileutils::removeFile(temporary);
         throw WriteError("libpng is out of memory while writing " + path.string());
     }
     png_infop info = png_create_info_struct(png);
     if (info == nullptr) {
         png_destroy_write_struct(&png, nullptr);
         std::fclose(file);
+        fileutils::removeFile(temporary);
         throw WriteError("libpng is out of memory while writing " + path.string());
     }
 
     if (setjmp(png_jmpbuf(png)) != 0) {
         png_destroy_write_struct(&png, &info);
         std::fclose(file);
-        std::error_code ec;
-        std::filesystem::remove(path, ec);
+        fileutils::removeFile(temporary);
         throw WriteError("failed to write " + path.string() + ": " + error);
     }
 
@@ -88,10 +96,11 @@ void writePixels(const std::filesystem::path& path, const std::vector<std::uint8
     png_destroy_write_struct(&png, &info);
 
     if (std::fclose(file) != 0) {
-        std::error_code ec;
-        std::filesystem::remove(path, ec);
+        fileutils::removeFile(temporary);
         throw WriteError("failed to flush " + path.string());
     }
+
+    fileutils::replaceFile(temporary, path);
 }
 
 } // namespace

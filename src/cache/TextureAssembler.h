@@ -35,12 +35,19 @@ public:
     /// Read the header block at `index`, read the body file of `entry` and join
     /// them into one codestream.
     ///
+    /// The announced body size is compared with the file size before the file is
+    /// read, and the whole run is refused when the record announces a body that
+    /// no texture of this format can have, so a corrupt texture.entries cannot
+    /// make this allocate gigabytes.
+    ///
     /// Throws:
-    ///   EntryNotFound - the record has no body (bodySize <= 0) or the body file
-    ///                   does not exist
-    ///   CacheTooSmall - texture.cache ends before the header block
-    ///   SizeMismatch  - the body file size differs from the recorded bodySize
-    ///   IoError       - any other I/O failure
+    ///   EntryNotFound  - the record has no body (bodySize <= 0) or the body file
+    ///                    does not exist
+    ///   CacheTooSmall  - texture.cache ends before the header block
+    ///   SizeMismatch   - the body file size differs from the recorded bodySize
+    ///   InvalidFormat  - the announced body size is not plausible (see
+    ///                    CacheFormatConfig::kMaxBodySize)
+    ///   IoError        - any other I/O failure
     AssembledTexture assemble(const TextureEntry& entry, std::uint32_t index) const;
 
     /// Pure variant, used by tests and by callers that already have both halves.

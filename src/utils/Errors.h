@@ -19,6 +19,10 @@ enum class ErrorCode : int {
     WriteError = 7,
     IoError = 8,
     InvalidFormat = 9,
+    /// The run stopped because the user interrupted it (Ctrl+C, SIGTERM).
+    /// Returned even when the records converted so far succeeded, so a caller
+    /// can tell "finished" from "stopped early".
+    Interrupted = 10,
 };
 
 /// Base class for all recoverable errors raised by the core.

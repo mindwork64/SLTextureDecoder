@@ -23,6 +23,7 @@ TEST(CliOptions, ParsesACacheDirectoryAndDefaults) {
     EXPECT_FALSE(options.overwrite);
     EXPECT_FALSE(options.keepJ2k);
     EXPECT_FALSE(options.noAlpha);
+    EXPECT_FALSE(options.dryRun);
     EXPECT_FALSE(options.verbose);
     EXPECT_FALSE(options.id.has_value());
     EXPECT_FALSE(options.limit.has_value());
@@ -49,6 +50,14 @@ TEST(CliOptions, ParsesTheOutputFlags) {
 
     EXPECT_TRUE(options.keepJ2k);
     EXPECT_TRUE(options.noAlpha);
+    EXPECT_FALSE(options.dryRun);
+}
+
+TEST(CliOptions, ParsesDryRun) {
+    const CliOptions options = CliOptions::parse({"--cache-dir", "D:/cache", "--dry-run"});
+
+    EXPECT_TRUE(options.dryRun);
+    EXPECT_EQ(options.action, CliOptions::Action::Decode);
 }
 
 TEST(CliOptions, ParsesASingleRecordIndex) {

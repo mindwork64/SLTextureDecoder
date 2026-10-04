@@ -16,6 +16,7 @@
 #include "cache/TextureCacheReader.h"
 #include "cli/CliOptions.h"
 #include "utils/Errors.h"
+#include "utils/Interrupt.h"
 #include "utils/Logger.h"
 
 #ifdef _WIN32
@@ -107,6 +108,7 @@ int runHeadless(const std::vector<std::string>& args, sltcd::Logger& logger) {
     batch.overwrite = options.overwrite;
     batch.keepJ2k = options.keepJ2k;
     batch.noAlpha = options.noAlpha;
+    batch.dryRun = options.dryRun;
     batch.jobs = jobs;
     batch.limit = options.limit.value_or(0);
     if (options.index.has_value()) {
@@ -121,6 +123,9 @@ int runHeadless(const std::vector<std::string>& args, sltcd::Logger& logger) {
     }
 
     const sltcd::batch::BatchSummary summary = sltcd::batch::run(batch, logger);
+    if (summary.interrupted) {
+        return static_cast<int>(sltcd::ErrorCode::Interrupted);
+    }
     return summary.failed == 0 ? static_cast<int>(sltcd::ErrorCode::Ok)
                                : static_cast<int>(sltcd::ErrorCode::DecodeError);
 }
@@ -134,6 +139,7 @@ int main(int argc, char** argv) {
     if (headless) {
         attachParentConsole();
         sltcd::Logger logger;
+        sltcd::interrupt::installHandler();
         try {
             return runHeadless(args, logger);
         } catch (const sltcd::Error& error) {

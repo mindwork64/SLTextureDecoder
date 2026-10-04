@@ -7,6 +7,7 @@
 #include "cli/CliOptions.h"
 #include "cli/Runner.h"
 #include "utils/Errors.h"
+#include "utils/Interrupt.h"
 #include "utils/Logger.h"
 
 namespace {
@@ -25,6 +26,10 @@ int main(int argc, char** argv) {
     const std::vector<std::string> args(argv + (argc > 0 ? 1 : 0), argv + argc);
 
     sltcd::Logger logger;
+
+    // Ctrl+C sets a flag instead of killing the process: the run then stops
+    // between two records and reports the exit code of an interrupted run.
+    sltcd::interrupt::installHandler();
 
     if (args.empty()) {
         std::cout << sltcd::cli::usageText();
@@ -47,6 +52,11 @@ int main(int argc, char** argv) {
         }
 
         const sltcd::cli::RunSummary summary = sltcd::cli::run(options, logger);
+        if (summary.interrupted) {
+            // The records converted so far are complete; the code tells the
+            // caller that the run did not reach the end of the selection.
+            return static_cast<int>(sltcd::ErrorCode::Interrupted);
+        }
         return summary.failed == 0 ? static_cast<int>(sltcd::ErrorCode::Ok)
                                    : static_cast<int>(sltcd::ErrorCode::DecodeError);
     } catch (const sltcd::Error& error) {

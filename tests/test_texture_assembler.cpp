@@ -10,6 +10,7 @@
 #include "cache/CacheLayout.h"
 #include "cache/TextureAssembler.h"
 #include "cache/TextureEntries.h"
+#include "utils/Constants.h"
 #include "utils/Errors.h"
 #include "utils/FileUtils.h"
 
@@ -152,4 +153,23 @@ TEST_F(TextureAssemblerFileTest, RejectsBodyFileWithUnexpectedSize) {
 
     const sltcd::cache::TextureAssembler assembler(*layout_);
     EXPECT_THROW(assembler.assemble(entry, 394), sltcd::SizeMismatch);
+}
+
+TEST_F(TextureAssemblerFileTest, RejectsABodyLargerThanTheFormatAllows) {
+    sltcd::TextureEntry entry = miniEntries().at(394);
+    // The file on disk is 3501 bytes and stays untouched: the record is refused
+    // before it is read, so the size never has to match.
+    entry.bodySize = static_cast<std::int32_t>(sltcd::CacheFormatConfig::kMaxBodySize + 1);
+
+    const sltcd::cache::TextureAssembler assembler(*layout_);
+    EXPECT_THROW(assembler.assemble(entry, 394), sltcd::InvalidFormat);
+}
+
+TEST(TextureAssembler, RejectsABodyLargerThanTheFormatAllowsInMemory) {
+    const sltcd::TextureEntries entries = miniEntries();
+    sltcd::TextureEntry entry = entries.at(394);
+    entry.bodySize = static_cast<std::int32_t>(sltcd::CacheFormatConfig::kMaxBodySize + 1);
+
+    const std::vector<std::uint8_t> block = sltcd::fileutils::readFile(dataFile("block_394.bin"));
+    EXPECT_THROW(sltcd::cache::TextureAssembler::assembleBuffers(entry, 394, block, {}), sltcd::InvalidFormat);
 }

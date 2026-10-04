@@ -87,6 +87,42 @@ TEST(Jpeg2000Decoder, FailsOnTruncatedRecordWithDiagnostics) {
     EXPECT_THROW(sltcd::jpeg2000::Jpeg2000Decoder::decode(assembleFixture(100)), sltcd::DecodeError);
 }
 
+TEST(Jpeg2000Decoder, RejectsACodestreamThatAnnouncesAnImplausibleSize) {
+    std::vector<std::uint8_t> codestream = assembleFixture(394);
+
+    // SIZ marker of a raw codestream: SOC(2) + FF51(2) + Lsiz(2) + Rsiz(2), so
+    // the image size Xsiz starts at byte 8 and Ysiz at byte 12. A flipped byte
+    // in the cached block is enough to make a header claim a huge image.
+    const std::uint32_t absurd = 20'000; // far above CacheFormatConfig::kMaxImageDimension
+    for (int i = 0; i < 4; ++i) {
+        codestream[8 + i] = static_cast<std::uint8_t>((absurd >> (24 - 8 * i)) & 0xFF);
+    }
+
+    std::string diagnostics;
+    const auto image = sltcd::jpeg2000::Jpeg2000Decoder::tryDecode(codestream, {}, &diagnostics);
+
+    EXPECT_FALSE(image.has_value());
+    EXPECT_NE(diagnostics.find("not plausible"), std::string::npos);
+    EXPECT_THROW(sltcd::jpeg2000::Jpeg2000Decoder::decode(codestream), sltcd::DecodeError);
+}
+
+TEST(Jpeg2000Decoder, RejectsACodestreamWithAReversedImageArea) {
+    std::vector<std::uint8_t> codestream = assembleFixture(394);
+
+    // Ysiz below YOsiz (0 here) is nonsense; the header checks must catch it
+    // instead of trusting the unsigned difference.
+    codestream[12] = 0xFF;
+    codestream[13] = 0xFF;
+    codestream[14] = 0xFF;
+    codestream[15] = 0xFF;
+
+    std::string diagnostics;
+    const auto image = sltcd::jpeg2000::Jpeg2000Decoder::tryDecode(codestream, {}, &diagnostics);
+
+    EXPECT_FALSE(image.has_value());
+    EXPECT_FALSE(diagnostics.empty());
+}
+
 TEST(Jpeg2000Decoder, LenientModeRecoversTruncatedRecords) {
     // OpenJPEG returns the samples it could decode when it is not asked to be
     // strict, even though the cached codestream of record 100 is truncated.

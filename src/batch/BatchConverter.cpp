@@ -10,12 +10,14 @@
 #include <thread>
 #include <vector>
 
+#include "cache/CacheLayout.h"
 #include "cache/TextureCacheReader.h"
 #include "cache/TextureEntries.h"
 #include "jpeg2000/ComponentConverter.h"
 #include "png/PngWriter.h"
 #include "utils/Errors.h"
 #include "utils/FileUtils.h"
+#include "utils/Interrupt.h"
 
 namespace sltcd::batch {
 namespace {
@@ -85,6 +87,8 @@ BatchSummary run(const BatchOptions& options, Logger& logger, const BatchCallbac
     }
 
     const cache::TextureCacheReader reader = cache::TextureCacheReader::open(options.cacheDir);
+    // Only used by a dry run, which needs the body file names without decoding.
+    const cache::CacheLayout layout(options.cacheDir);
 
     BatchSummary summary;
     summary.outDir = outputDirectory(options);
@@ -106,17 +110,18 @@ BatchSummary run(const BatchOptions& options, Logger& logger, const BatchCallbac
     summary.selected = indices.size();
 
     const unsigned jobs = workerCount(options, indices.size());
-    logger.info(std::to_string(summary.selected) + " texture(s) to decode into " + summary.outDir.string() + " using " +
-                std::to_string(jobs) + " worker thread(s)");
+    logger.info(std::to_string(summary.selected) + " texture(s) to " + (options.dryRun ? "inspect" : "decode") +
+                " into " + summary.outDir.string() + " using " + std::to_string(jobs) + " worker thread(s)");
 
     if (indices.empty()) {
         logger.info("done: nothing to do");
         return summary;
     }
 
-    {
+    if (!interrupt::requested() && !options.dryRun) {
         // Fail fast instead of reporting tens of thousands of identical write
-        // errors one by one.
+        // errors one by one. A dry run creates nothing, and an already
+        // interrupted run must not leave an empty output directory behind.
         std::error_code ec;
         std::filesystem::create_directories(summary.outDir, ec);
         if (ec) {
@@ -126,6 +131,7 @@ BatchSummary run(const BatchOptions& options, Logger& logger, const BatchCallbac
 
     std::atomic<std::size_t> next{0};
     std::atomic<bool> cancelled{false};
+    std::atomic<bool> interrupted{false};
     std::mutex mutex; // guards the counters and keeps log lines whole
 
     const auto worker = [&]() {
@@ -134,7 +140,12 @@ BatchSummary run(const BatchOptions& options, Logger& logger, const BatchCallbac
             if (slot >= indices.size()) {
                 break;
             }
-            if (callbacks.isCancelled && callbacks.isCancelled()) {
+            // A Ctrl+C stops every worker, a callback that returns true (the
+            // Cancel button of the GUI) stops at least one of them.
+            if (interrupt::requested()) {
+                interrupted = true;
+            }
+            if (interrupted.load() || (callbacks.isCancelled && callbacks.isCancelled())) {
                 cancelled = true;
                 break;
             }
@@ -154,6 +165,31 @@ BatchSummary run(const BatchOptions& options, Logger& logger, const BatchCallbac
                 ++summary.skipped;
                 logger.verbose("record " + std::to_string(index) + ": " + target.filename().string() +
                                " already exists");
+                continue;
+            }
+            if (options.dryRun) {
+                // A dry run also checks the body file, so its counters match
+                // what a real run would report for this record.
+                const std::filesystem::path body = layout.bodyFile(entry.id);
+                std::lock_guard<std::mutex> lock(mutex);
+                if (!fileutils::exists(body) || fileutils::size(body) != static_cast<std::uintmax_t>(entry.bodySize)) {
+                    ++summary.failed;
+                    logger.error("record " + std::to_string(index) + " (" + entry.id.toString() +
+                                 "): the body file is missing or has another size than the record announces");
+                } else {
+                    // Nothing is written and no result is reported: the
+                    // counters only describe the run that would happen.
+                    ++summary.written;
+                    if (!entry.isComplete()) {
+                        ++summary.partial;
+                    }
+                    logger.verbose("record " + std::to_string(index) + " (" + entry.id.toString() +
+                                   ") would be written to " + target.filename().string() +
+                                   (entry.isComplete() ? "" : " (partial)"));
+                }
+                if (callbacks.onProgress) {
+                    callbacks.onProgress(summary);
+                }
                 continue;
             }
 
@@ -228,9 +264,17 @@ BatchSummary run(const BatchOptions& options, Logger& logger, const BatchCallbac
     }
 
     summary.cancelled = cancelled.load();
-    logger.info("done: " + std::to_string(summary.written) + " PNG written (" + std::to_string(summary.partial) +
-                " best effort), " + std::to_string(summary.skipped) + " skipped, " + std::to_string(summary.failed) +
-                " failed" + (summary.cancelled ? " [cancelled]" : ""));
+    summary.interrupted = interrupted.load();
+    const std::string stop = summary.interrupted ? " [interrupted]" : (summary.cancelled ? " [cancelled]" : "");
+    if (options.dryRun) {
+        logger.info("dry run: " + std::to_string(summary.written) + " texture(s) would be written (" +
+                    std::to_string(summary.partial) + " best effort), " + std::to_string(summary.skipped) +
+                    " skipped, " + std::to_string(summary.failed) + " failed" + stop);
+    } else {
+        logger.info("done: " + std::to_string(summary.written) + " PNG written (" + std::to_string(summary.partial) +
+                    " best effort), " + std::to_string(summary.skipped) + " skipped, " +
+                    std::to_string(summary.failed) + " failed" + stop);
+    }
     return summary;
 }
 

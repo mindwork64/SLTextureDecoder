@@ -7,6 +7,7 @@
 
 #include <openjpeg.h>
 
+#include "utils/Constants.h"
 #include "utils/Errors.h"
 
 namespace sltcd::jpeg2000 {
@@ -160,6 +161,39 @@ std::string withDiagnostics(const std::string& message, const Diagnostics& diagn
     return message + " (" + diagnostics.text() + ")";
 }
 
+/// Geometry checks on the main header, i.e. before OpenJPEG allocates one
+/// buffer per component and before the interleaved pixel buffer is built.
+///
+/// A texture of this cache is at most 2048x2048 with five components, so the
+/// limits in CacheFormatConfig are far above anything the viewer writes: a
+/// codestream that announces more is corrupt (a flipped byte in the SIZ marker
+/// is enough) or not a texture at all, and must not be decoded.
+std::optional<std::string> implausibleGeometry(const opj_image_t& image) {
+    if (image.numcomps == 0) {
+        return std::string("the codestream declares no components");
+    }
+
+    const std::uint64_t width = static_cast<std::uint64_t>(image.x1) - image.x0;
+    const std::uint64_t height = static_cast<std::uint64_t>(image.y1) - image.y0;
+    if (width == 0 || height == 0) {
+        return std::string("the codestream declares an empty image area");
+    }
+    if (image.x1 < image.x0 || image.y1 < image.y0) {
+        return "the codestream declares a reversed image area (" + std::to_string(image.x0) + ".." +
+               std::to_string(image.x1) + " x " + std::to_string(image.y0) + ".." + std::to_string(image.y1) + ")";
+    }
+    if (width > CacheFormatConfig::kMaxImageDimension || height > CacheFormatConfig::kMaxImageDimension ||
+        image.numcomps > CacheFormatConfig::kMaxImageComponents) {
+        return "the codestream declares " + std::to_string(width) + "x" + std::to_string(height) + " with " +
+               std::to_string(image.numcomps) + " component(s), which is not plausible for this cache";
+    }
+    if (width * height * image.numcomps > CacheFormatConfig::kMaxImageSamples) {
+        return "the codestream declares " + std::to_string(width) + "x" + std::to_string(height) + " with " +
+               std::to_string(image.numcomps) + " component(s), i.e. more samples than this cache can hold";
+    }
+    return std::nullopt;
+}
+
 /// Convert one component sample to 8 bit unsigned.
 ///
 /// OpenJPEG hands out the raw samples: signed components are offset by half of
@@ -226,6 +260,13 @@ std::optional<DecodedImage> decodeImpl(const std::vector<std::uint8_t>& codestre
     }
     ImageGuard image(rawImage);
 
+    // Check the announced geometry before opj_decode() fills one buffer per
+    // component: a garbage SIZ marker can ask for gigabytes otherwise.
+    if (const std::optional<std::string> rejected = implausibleGeometry(*rawImage); rejected.has_value()) {
+        diagnostics.append(*rejected);
+        return std::nullopt;
+    }
+
     if (opj_decode(rawCodec, rawStream, rawImage) != OPJ_TRUE) {
         diagnostics.append("decoding the tile data failed");
         return std::nullopt;
@@ -239,17 +280,15 @@ std::optional<DecodedImage> decodeImpl(const std::vector<std::uint8_t>& codestre
 }
 
 std::optional<DecodedImage> convertImage(const opj_image_t& image, Diagnostics& diagnostics) {
-    if (image.numcomps == 0) {
-        diagnostics.append("the codestream declares no components");
+    // The same checks run before opj_decode(); repeating them here keeps this
+    // function safe for a caller that hands over an image of its own.
+    if (const std::optional<std::string> rejected = implausibleGeometry(image); rejected.has_value()) {
+        diagnostics.append(*rejected);
         return std::nullopt;
     }
 
     const std::uint32_t width = image.x1 - image.x0;
     const std::uint32_t height = image.y1 - image.y0;
-    if (width == 0 || height == 0) {
-        diagnostics.append("the codestream declares an empty image area");
-        return std::nullopt;
-    }
 
     for (std::uint32_t c = 0; c < image.numcomps; ++c) {
         const opj_image_comp_t& component = image.comps[c];

@@ -26,7 +26,7 @@ Decodes Second Life / Firestorm JPEG 2000 texture caches
 | 8 | CLI (`--cache-dir`, filters, progress) | done |
 | 9 | Batch conversion service (worker pool, resume) | done |
 | 10 | GUI (Qt 6 Widgets, dynamic) | done |
-| 11 | Robustness / error reporting | planned |
+| 11 | Robustness / error reporting | done |
 | 12 | Release build, static OpenJPEG | deferred |
 
 The reverse engineered layout, the two populations of records and the evidence
@@ -101,6 +101,7 @@ SLTextureDecoder --cache-dir <dir> [options]
 | `--limit <n>` | stop after n textures |
 | `--complete-only` | skip records whose cached codestream is truncated |
 | `--overwrite` | write over existing PNG files (default: skip them) |
+| `--dry-run` | report what a run would write and change nothing |
 | `--keep-j2k` | also write the assembled codestream as `<uuid>.j2c` |
 | `--no-alpha` | write an RGB PNG (drop the alpha channel) |
 | `-v`, `--verbose` | log every record |
@@ -112,7 +113,20 @@ Each texture becomes `<uuid>.png` (complete codestream) or `<uuid>.partial.png`
 codestream is stored next to it as `<uuid>.j2c` / `<uuid>.partial.j2c`, and
 `--no-alpha` writes RGB instead of RGBA. The exit code is `0` when every
 selected texture was converted, otherwise the code of the first failure
-(`3` entry not found, `6` decode failure, ... - see `utils/Errors.h`).
+(`3` entry not found, `6` decode failure, `10` the run was interrupted, ... -
+see `utils/Errors.h`).
+
+`--dry-run` reads `texture.entries` plus the per-texture body files (name and
+size, no decoding) and reports the numbers a real run would produce, so it can
+gate a long run without touching the output directory at all.
+
+Robustness: every file is written to `<name>.part` first and renamed over the
+target once it is complete, so an interrupted run leaves a stale `.part` file
+instead of a truncated PNG - Ctrl+C stops after the record in progress and
+exits with code `10`. A broken record is logged and counted instead of ending
+the run (unexpected `std::bad_alloc` and other `std::exception`s included), and
+a record that announces a body or an image size no texture of this format can
+have is refused before anything is allocated (see `utils/Constants.h`).
 
 ```powershell
 # five textures into a scratch directory, with per record logging
