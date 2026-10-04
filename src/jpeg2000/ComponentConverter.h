@@ -23,4 +23,9 @@ namespace sltcd::jpeg2000 {
 /// Throws sltcd::DecodeError when `image` has no pixels or inconsistent sizes.
 std::vector<std::uint8_t> toRgba(const DecodedImage& image, std::string* warning = nullptr);
 
+/// Same component mapping, but without the alpha channel: exactly 3 samples per
+/// pixel (RGB). Used by the `--no-alpha` output; `warning` behaves like in
+/// toRgba.
+std::vector<std::uint8_t> toRgb(const DecodedImage& image, std::string* warning = nullptr);
+
 } // namespace sltcd::jpeg2000

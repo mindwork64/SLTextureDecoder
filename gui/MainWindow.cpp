@@ -177,6 +177,10 @@ void MainWindow::buildUi() {
                                    "run can be resumed by starting it again."));
     verboseCheck_ = new QCheckBox(tr("Verbose log"), optionsGroup);
     verboseCheck_->setToolTip(tr("Log every texture, not just warnings and errors."));
+    keepJ2kCheck_ = new QCheckBox(tr("Keep J2K codestream"), optionsGroup);
+    keepJ2kCheck_->setToolTip(tr("Also write the assembled codestream as <uuid>.j2c next to each PNG."));
+    noAlphaCheck_ = new QCheckBox(tr("No alpha channel"), optionsGroup);
+    noAlphaCheck_->setToolTip(tr("Write RGB PNG files instead of RGBA (the alpha channel is dropped)."));
     jobsSpin_ = new QSpinBox(optionsGroup);
     jobsSpin_->setRange(0, 32);
     jobsSpin_->setSpecialValueText(tr("auto"));
@@ -189,6 +193,8 @@ void MainWindow::buildUi() {
     optionsLayout->addWidget(completeOnlyCheck_);
     optionsLayout->addWidget(overwriteCheck_);
     optionsLayout->addWidget(verboseCheck_);
+    optionsLayout->addWidget(keepJ2kCheck_);
+    optionsLayout->addWidget(noAlphaCheck_);
     optionsLayout->addStretch(1);
     optionsLayout->addWidget(new QLabel(tr("Threads:"), optionsGroup));
     optionsLayout->addWidget(jobsSpin_);
@@ -273,6 +279,8 @@ void MainWindow::loadSettings() {
     completeOnlyCheck_->setChecked(settings.value(QStringLiteral("completeOnly"), false).toBool());
     overwriteCheck_->setChecked(settings.value(QStringLiteral("overwrite"), false).toBool());
     verboseCheck_->setChecked(settings.value(QStringLiteral("verbose"), false).toBool());
+    keepJ2kCheck_->setChecked(settings.value(QStringLiteral("keepJ2k"), false).toBool());
+    noAlphaCheck_->setChecked(settings.value(QStringLiteral("noAlpha"), false).toBool());
     jobsSpin_->setValue(settings.value(QStringLiteral("jobs"), jobsSpin_->value()).toInt());
     limitSpin_->setValue(settings.value(QStringLiteral("limit"), 0).toInt());
     showCacheInfo();
@@ -285,6 +293,8 @@ void MainWindow::saveSettings() const {
     settings.setValue(QStringLiteral("completeOnly"), completeOnlyCheck_->isChecked());
     settings.setValue(QStringLiteral("overwrite"), overwriteCheck_->isChecked());
     settings.setValue(QStringLiteral("verbose"), verboseCheck_->isChecked());
+    settings.setValue(QStringLiteral("keepJ2k"), keepJ2kCheck_->isChecked());
+    settings.setValue(QStringLiteral("noAlpha"), noAlphaCheck_->isChecked());
     settings.setValue(QStringLiteral("jobs"), jobsSpin_->value());
     settings.setValue(QStringLiteral("limit"), limitSpin_->value());
 }
@@ -299,6 +309,8 @@ void MainWindow::setRunning(bool running) {
     outputBrowseButton_->setEnabled(!running);
     completeOnlyCheck_->setEnabled(!running);
     overwriteCheck_->setEnabled(!running);
+    keepJ2kCheck_->setEnabled(!running);
+    noAlphaCheck_->setEnabled(!running);
     jobsSpin_->setEnabled(!running);
     limitSpin_->setEnabled(!running);
 }
@@ -419,6 +431,8 @@ void MainWindow::startBatch() {
     options.outDir = toPath(outputDir());
     options.completeOnly = completeOnlyCheck_->isChecked();
     options.overwrite = overwriteCheck_->isChecked();
+    options.keepJ2k = keepJ2kCheck_->isChecked();
+    options.noAlpha = noAlphaCheck_->isChecked();
     options.jobs = static_cast<unsigned>(jobsSpin_->value());
     options.limit = static_cast<std::uint32_t>(limitSpin_->value());
 

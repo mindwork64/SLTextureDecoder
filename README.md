@@ -101,12 +101,16 @@ SLTextureDecoder --cache-dir <dir> [options]
 | `--limit <n>` | stop after n textures |
 | `--complete-only` | skip records whose cached codestream is truncated |
 | `--overwrite` | write over existing PNG files (default: skip them) |
+| `--keep-j2k` | also write the assembled codestream as `<uuid>.j2c` |
+| `--no-alpha` | write an RGB PNG (drop the alpha channel) |
 | `-v`, `--verbose` | log every record |
 | `-h`, `--help`, `-V`, `--version` | help / version |
 
 Each texture becomes `<uuid>.png` (complete codestream) or `<uuid>.partial.png`
 (best effort from a truncated one - see
-[docs/format-notes.md](docs/format-notes.md)). The exit code is `0` when every
+[docs/format-notes.md](docs/format-notes.md)). With `--keep-j2k` the assembled
+codestream is stored next to it as `<uuid>.j2c` / `<uuid>.partial.j2c`, and
+`--no-alpha` writes RGB instead of RGBA. The exit code is `0` when every
 selected texture was converted, otherwise the code of the first failure
 (`3` entry not found, `6` decode failure, ... - see `utils/Errors.h`).
 
@@ -144,6 +148,9 @@ selected one; **Cancel** stops after the texture that is being decoded.
   [wiki Performance page](https://github.com/mindwork64/SLTextureDecoder/wiki/Performance).
 * **Overwrite existing files** stays off by default, so the PNGs already in the
   output folder are skipped: an interrupted run is resumed by starting it again.
+* **Keep J2K codestream** stores the assembled codestream as `<uuid>.j2c` next to
+  each PNG; **No alpha channel** writes RGB PNGs instead of RGBA. Both start off
+  and are remembered with the other options.
 * The last used folders and options are remembered in
   `HKCU\Software\SLTextureDecoder\GUI`.
 * Browse the results in Explorer with **Open output folder**.
@@ -179,11 +186,11 @@ src/
     CliOptions.*           command line -> validated options
     Runner.*               the conversion run itself (progress, report)
   jpeg2000/
-    ComponentConverter.*   component samples -> interleaved RGBA
+    ComponentConverter.*   component samples -> interleaved RGBA / RGB
     DecodedImage.h         decoded image (8 bit, interleaved)
     Jpeg2000Decoder.*      OpenJPEG wrapper
   png/
-    PngWriter.*            8 bit RGBA PNG output
+    PngWriter.*            8 bit RGBA/RGB PNG output
   utils/
     Constants.h            format constants (CacheFormatConfig)
     Errors.h               error hierarchy with exit codes

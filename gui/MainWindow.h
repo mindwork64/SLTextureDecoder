@@ -67,6 +67,8 @@ private:
     QCheckBox* completeOnlyCheck_ = nullptr;
     QCheckBox* overwriteCheck_ = nullptr;
     QCheckBox* verboseCheck_ = nullptr;
+    QCheckBox* keepJ2kCheck_ = nullptr;
+    QCheckBox* noAlphaCheck_ = nullptr;
     QSpinBox* jobsSpin_ = nullptr;
     QSpinBox* limitSpin_ = nullptr;
     QPushButton* startButton_ = nullptr;

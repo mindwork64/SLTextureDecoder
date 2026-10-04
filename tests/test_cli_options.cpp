@@ -21,6 +21,8 @@ TEST(CliOptions, ParsesACacheDirectoryAndDefaults) {
     EXPECT_EQ(options.outputDirectory(), std::filesystem::path("D:/cache") / "png");
     EXPECT_FALSE(options.completeOnly);
     EXPECT_FALSE(options.overwrite);
+    EXPECT_FALSE(options.keepJ2k);
+    EXPECT_FALSE(options.noAlpha);
     EXPECT_FALSE(options.verbose);
     EXPECT_FALSE(options.id.has_value());
     EXPECT_FALSE(options.limit.has_value());
@@ -40,6 +42,13 @@ TEST(CliOptions, ParsesFiltersAndFlags) {
     EXPECT_TRUE(options.completeOnly);
     EXPECT_TRUE(options.overwrite);
     EXPECT_TRUE(options.verbose);
+}
+
+TEST(CliOptions, ParsesTheOutputFlags) {
+    const CliOptions options = CliOptions::parse({"--cache-dir", "D:/cache", "--keep-j2k", "--no-alpha"});
+
+    EXPECT_TRUE(options.keepJ2k);
+    EXPECT_TRUE(options.noAlpha);
 }
 
 TEST(CliOptions, ParsesASingleRecordIndex) {

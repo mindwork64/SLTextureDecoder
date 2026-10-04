@@ -105,3 +105,26 @@ TEST(PngWriter, RejectsABufferThatDoesNotMatchTheSize) {
 
     std::filesystem::remove_all(path.parent_path());
 }
+
+TEST(PngWriter, WritesAnRgbImageThatReadsBackUnchanged) {
+    // 4x3 image, three samples per pixel.
+    const std::uint32_t width = 4;
+    const std::uint32_t height = 3;
+    std::vector<std::uint8_t> rgb(width * height * 3);
+    for (std::size_t i = 0; i < rgb.size(); ++i) {
+        rgb[i] = static_cast<std::uint8_t>(i * 5);
+    }
+
+    const std::filesystem::path path = scratchFile("sample_rgb.png");
+    sltcd::png::writeRgb(path, rgb, width, height);
+
+    ASSERT_TRUE(std::filesystem::exists(path));
+    const LoadedPng loaded = readPng(path);
+    EXPECT_EQ(loaded.width, width);
+    EXPECT_EQ(loaded.height, height);
+    EXPECT_EQ(loaded.bitDepth, 8);
+    EXPECT_EQ(loaded.colorType, PNG_COLOR_TYPE_RGB);
+    EXPECT_EQ(loaded.rgba, rgb);
+
+    std::filesystem::remove_all(path.parent_path());
+}

@@ -105,6 +105,8 @@ int runHeadless(const std::vector<std::string>& args, sltcd::Logger& logger) {
     batch.outDir = options.outDir;
     batch.completeOnly = options.completeOnly;
     batch.overwrite = options.overwrite;
+    batch.keepJ2k = options.keepJ2k;
+    batch.noAlpha = options.noAlpha;
     batch.jobs = jobs;
     batch.limit = options.limit.value_or(0);
     if (options.index.has_value()) {

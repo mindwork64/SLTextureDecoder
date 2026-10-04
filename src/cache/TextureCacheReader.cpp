@@ -47,14 +47,14 @@ std::vector<std::uint32_t> TextureCacheReader::decodableIndices(bool completeOnl
     return indices;
 }
 
-DecodedTexture TextureCacheReader::decode(std::uint32_t index) const {
+DecodedTexture TextureCacheReader::decode(std::uint32_t index, bool keepCodestream) const {
     if (index >= entries_.size()) {
         throw EntryNotFound("record " + std::to_string(index) + " is out of range, the cache holds " +
                             std::to_string(entries_.size()) + " records");
     }
 
     const TextureEntry& entry = entries_.at(index);
-    const AssembledTexture assembled = assembler_.assemble(entry, index);
+    AssembledTexture assembled = assembler_.assemble(entry, index);
 
     DecodedTexture result;
     result.id = entry.id;
@@ -72,6 +72,9 @@ DecodedTexture TextureCacheReader::decode(std::uint32_t index) const {
     }
 
     result.image = *image;
+    if (keepCodestream) {
+        result.codestream = std::move(assembled.codestream);
+    }
     return result;
 }
 

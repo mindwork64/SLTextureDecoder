@@ -21,6 +21,10 @@ struct BatchOptions {
     bool completeOnly = false;
     /// Rewrite PNG files that are already there.
     bool overwrite = false;
+    /// Also write the assembled codestream as <uuid>.j2c next to the PNG.
+    bool keepJ2k = false;
+    /// Write an RGB PNG instead of RGBA (the alpha channel is dropped).
+    bool noAlpha = false;
     /// Worker threads; 0 means std::thread::hardware_concurrency().
     unsigned jobs = 1;
     /// Convert at most this many textures; 0 means no limit.
@@ -69,6 +73,10 @@ struct BatchCallbacks {
 
 /// File name of one texture: <uuid>.png or <uuid>.partial.png.
 std::filesystem::path pngFile(const std::filesystem::path& outDir, const UUID& id, bool complete);
+
+/// File name of the assembled codestream next to the PNG (keepJ2k):
+/// <uuid>.j2c or <uuid>.partial.j2c.
+std::filesystem::path codestreamFile(const std::filesystem::path& outDir, const UUID& id, bool complete);
 
 /// Output directory the run will use (resolves the empty outDir default).
 std::filesystem::path outputDirectory(const BatchOptions& options);

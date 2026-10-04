@@ -26,6 +26,9 @@ struct DecodedTexture {
     /// here as well, so `complete` (not this string) tells a full decode from a
     /// salvaged one.
     std::string diagnostics;
+    /// The assembled codestream, filled only when decode() was asked for it
+    /// (`keepCodestream`), so `--keep-j2k` can store it.
+    std::vector<std::uint8_t> codestream;
 };
 
 /// Iterates a texture cache directory: reads texture.entries and rebuilds and
@@ -50,7 +53,9 @@ public:
     ///
     /// Throws EntryNotFound (bad index, no body, missing body file),
     /// CacheTooSmall, SizeMismatch, DecodeError, IoError.
-    DecodedTexture decode(std::uint32_t index) const;
+    /// With `keepCodestream` the assembled codestream is kept as well
+    /// (DecodedTexture::codestream), which is what `--keep-j2k` stores.
+    DecodedTexture decode(std::uint32_t index, bool keepCodestream = false) const;
 
 private:
     TextureCacheReader(CacheLayout layout, TextureEntries entries);

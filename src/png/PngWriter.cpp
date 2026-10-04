@@ -12,7 +12,6 @@
 namespace sltcd::png {
 namespace {
 
-constexpr std::size_t kChannels = 4;
 constexpr int kBitDepth = 8;
 
 /// libpng reports errors through longjmp; stash the text for the exception.
@@ -28,14 +27,15 @@ void onWarning(png_structp /*png*/, png_const_charp /*message*/) {
     // Warnings are not fatal and nothing here needs the extra detail.
 }
 
-} // namespace
-
-void writeRgba(const std::filesystem::path& path, const std::vector<std::uint8_t>& rgba, std::uint32_t width,
-               std::uint32_t height) {
-    const std::size_t expected = static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * kChannels;
-    if (width == 0 || height == 0 || rgba.size() != expected) {
-        throw WriteError("refusing to write " + path.string() + ": " + std::to_string(rgba.size()) + " bytes hold no " +
-                         std::to_string(width) + "x" + std::to_string(height) + " RGBA image");
+/// Shared body of writeRgba/writeRgb; `channels` samples per pixel and
+/// `colorType` the matching libpng colour type.
+void writePixels(const std::filesystem::path& path, const std::vector<std::uint8_t>& pixels, std::uint32_t width,
+                 std::uint32_t height, std::size_t channels, int colorType) {
+    const std::size_t expected = static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * channels;
+    if (width == 0 || height == 0 || pixels.size() != expected) {
+        throw WriteError("refusing to write " + path.string() + ": " + std::to_string(pixels.size()) +
+                         " bytes hold no " + std::to_string(width) + "x" + std::to_string(height) + " image with " +
+                         std::to_string(channels) + " channels");
     }
 
     if (path.has_parent_path()) {
@@ -73,15 +73,15 @@ void writeRgba(const std::filesystem::path& path, const std::vector<std::uint8_t
     }
 
     png_init_io(png, file);
-    png_set_IHDR(png, info, width, height, kBitDepth, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
-                 PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+    png_set_IHDR(png, info, width, height, kBitDepth, colorType, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
+                 PNG_FILTER_TYPE_DEFAULT);
     png_write_info(png, info);
 
     // libpng wants one pointer per row; the pixel buffer is already row major,
     // so fill a vector of row starts instead of copying the pixels.
     std::vector<png_bytep> rows(height);
     for (std::uint32_t y = 0; y < height; ++y) {
-        rows[y] = const_cast<png_bytep>(rgba.data() + static_cast<std::size_t>(y) * width * kChannels);
+        rows[y] = const_cast<png_bytep>(pixels.data() + static_cast<std::size_t>(y) * width * channels);
     }
     png_write_image(png, rows.data());
     png_write_end(png, info);
@@ -92,6 +92,18 @@ void writeRgba(const std::filesystem::path& path, const std::vector<std::uint8_t
         std::filesystem::remove(path, ec);
         throw WriteError("failed to flush " + path.string());
     }
+}
+
+} // namespace
+
+void writeRgba(const std::filesystem::path& path, const std::vector<std::uint8_t>& rgba, std::uint32_t width,
+               std::uint32_t height) {
+    writePixels(path, rgba, width, height, 4, PNG_COLOR_TYPE_RGB_ALPHA);
+}
+
+void writeRgb(const std::filesystem::path& path, const std::vector<std::uint8_t>& rgb, std::uint32_t width,
+              std::uint32_t height) {
+    writePixels(path, rgb, width, height, 3, PNG_COLOR_TYPE_RGB);
 }
 
 } // namespace sltcd::png
