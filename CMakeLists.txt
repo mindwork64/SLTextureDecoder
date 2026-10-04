@@ -29,7 +29,16 @@ endif()
 # -----------------------------------------------------------------------------
 # Dependencies
 # -----------------------------------------------------------------------------
-find_package(OpenJPEG 2.5 REQUIRED)
+# Debian/Ubuntu ship OpenJPEGConfig.cmake without an accompanying
+# OpenJPEGConfigVersion.cmake, so the package reports "version: unknown" and a
+# bare version request ("2.5") is rejected out of hand. Try the versioned form
+# first (it is satisfied where the package does carry a version file, e.g. the
+# MSYS2/mingw build) and fall back to the unversioned one otherwise.
+find_package(OpenJPEG 2.5 QUIET)
+if(NOT OpenJPEG_FOUND)
+    find_package(OpenJPEG REQUIRED)
+endif()
+
 find_package(PNG 1.6 REQUIRED)
 
 # OpenJPEG ships an exported target named "openjp2" (config package), while
